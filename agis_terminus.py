@@ -353,6 +353,115 @@ class AGISTerminus:
             _, ext = os.path.splitext(filepath)
             ext = ext.lower()
             
+            # Common file type mappings
+            extension_types = {
+                # Text files
+                '.txt': 'Text file',
+                '.py': 'Python script',
+                '.js': 'JavaScript file',
+                '.html': 'HTML document',
+                '.css': 'CSS stylesheet',
+                '.json': 'JSON data',
+                '.md': 'Markdown document',
+                '.log': 'Log file',
+                '.csv': 'CSV data',
+                '.xml': 'XML document',
+                '.bat': 'Windows batch file',
+                '.ps1': 'PowerShell script',
+                '.cmd': 'Windows command file',
+                '.ini': 'Configuration file',
+                '.conf': 'Configuration file',
+                '.config': 'Configuration file',
+                '.yaml': 'YAML document',
+                '.yml': 'YAML document',
+                
+                # Binary files
+                '.exe': 'Windows executable',
+                '.dll': 'Dynamic link library',
+                '.so': 'Shared object',
+                '.dylib': 'MacOS dynamic library',
+                '.bin': 'Binary data',
+                '.dat': 'Data file',
+                '.zip': 'ZIP archive',
+                '.rar': 'RAR archive',
+                '.7z': '7-Zip archive',
+                '.pdf': 'PDF document',
+                '.doc': 'Microsoft Word document',
+                '.docx': 'Microsoft Word document',
+                '.xls': 'Microsoft Excel spreadsheet',
+                '.xlsx': 'Microsoft Excel spreadsheet',
+                '.ppt': 'Microsoft PowerPoint presentation',
+                '.pptx': 'Microsoft PowerPoint presentation',
+                
+                # Images
+                '.jpg': 'JPEG image',
+                '.jpeg': 'JPEG image',
+                '.png': 'PNG image',
+                '.gif': 'GIF image',
+                '.bmp': 'BMP image',
+                '.ico': 'Icon file',
+                '.svg': 'SVG image',
+                '.webp': 'WebP image',
+                
+                # Audio
+                '.mp3': 'MP3 audio',
+                '.wav': 'WAV audio',
+                '.ogg': 'OGG audio',
+                '.flac': 'FLAC audio',
+                '.m4a': 'M4A audio',
+                '.wma': 'Windows Media audio',
+                
+                # Video
+                '.mp4': 'MP4 video',
+                '.avi': 'AVI video',
+                '.mov': 'QuickTime video',
+                '.wmv': 'Windows Media video',
+                '.flv': 'Flash video',
+                '.webm': 'WebM video',
+                '.mkv': 'Matroska video',
+                
+                # Code
+                '.c': 'C source code',
+                '.cpp': 'C++ source code',
+                '.h': 'Header file',
+                '.java': 'Java source code',
+                '.class': 'Java class file',
+                '.php': 'PHP script',
+                '.rb': 'Ruby script',
+                '.go': 'Go source code',
+                '.rs': 'Rust source code',
+                '.swift': 'Swift source code',
+                '.kt': 'Kotlin source code',
+                '.ts': 'TypeScript file',
+                '.tsx': 'TypeScript React file',
+                '.jsx': 'React JSX file',
+                
+                # Data
+                '.db': 'Database file',
+                '.sql': 'SQL script',
+                '.sqlite': 'SQLite database',
+                '.mdb': 'Microsoft Access database',
+                '.accdb': 'Microsoft Access database',
+                
+                # Fonts
+                '.ttf': 'TrueType font',
+                '.otf': 'OpenType font',
+                '.woff': 'Web Open Font',
+                '.woff2': 'Web Open Font 2',
+                
+                # Other
+                '.iso': 'ISO disk image',
+                '.img': 'Disk image',
+                '.vhd': 'Virtual hard disk',
+                '.vmdk': 'VMware virtual disk',
+                '.ova': 'Open Virtual Appliance',
+                '.ovf': 'Open Virtualization Format'
+            }
+            
+            # Check if we have a known extension
+            if ext in extension_types:
+                return extension_types[ext]
+            
             # Try to read file signature
             with open(filepath, 'rb') as f:
                 header = f.read(16)  # Read first 16 bytes
@@ -410,7 +519,14 @@ class AGISTerminus:
                 'is_binary': ext in self.binary_extensions,
                 'content_preview': None,
                 'line_count': 0,
-                'encoding': None
+                'encoding': None,
+                'is_executable': ext in {'.exe', '.bat', '.cmd', '.ps1', '.sh', '.py', '.js'},
+                'is_archive': ext in {'.zip', '.rar', '.7z', '.tar', '.gz'},
+                'is_document': ext in {'.doc', '.docx', '.pdf', '.txt', '.rtf'},
+                'is_image': ext in {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.ico', '.svg', '.webp'},
+                'is_audio': ext in {'.mp3', '.wav', '.ogg', '.flac', '.m4a', '.wma'},
+                'is_video': ext in {'.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv'},
+                'is_code': ext in {'.py', '.js', '.html', '.css', '.java', '.cpp', '.c', '.php', '.rb', '.go', '.rs', '.swift', '.kt', '.ts', '.tsx', '.jsx'}
             }
             
             # Try to read file content if it's a text file
@@ -461,6 +577,26 @@ class AGISTerminus:
         [bold]Type:[/bold] {'Text' if analysis['is_text'] else 'Binary' if analysis['is_binary'] else 'Unknown'}
         """
         
+        # Add file category information
+        categories = []
+        if analysis['is_executable']:
+            categories.append('Executable')
+        if analysis['is_archive']:
+            categories.append('Archive')
+        if analysis['is_document']:
+            categories.append('Document')
+        if analysis['is_image']:
+            categories.append('Image')
+        if analysis['is_audio']:
+            categories.append('Audio')
+        if analysis['is_video']:
+            categories.append('Video')
+        if analysis['is_code']:
+            categories.append('Code')
+            
+        if categories:
+            info += f"\n[bold]Categories:[/bold] {', '.join(categories)}"
+        
         if analysis['is_text']:
             info += f"""
             [bold]Line Count:[/bold] {analysis['line_count']}
@@ -474,11 +610,97 @@ class AGISTerminus:
         else:
             self.console.print(Panel(info, title="File Analysis", border_style="blue"))
     
+    def analyze_directory(self, directory: str = ".") -> None:
+        """
+        Analyze all files in the given directory and its subdirectories.
+        
+        Args:
+            directory (str): Directory to analyze (defaults to current directory)
+        """
+        try:
+            # Get all files in directory and subdirectories
+            file_count = 0
+            total_size = 0
+            file_types = {}
+            categories = {
+                'executables': [],
+                'archives': [],
+                'documents': [],
+                'images': [],
+                'audio': [],
+                'video': [],
+                'code': [],
+                'other': []
+            }
+            
+            self.console.print(f"\n[bold blue]Analyzing files in:[/bold blue] {os.path.abspath(directory)}")
+            
+            for root, _, files in os.walk(directory):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    try:
+                        analysis = self.analyze_file(file_path)
+                        if 'error' not in analysis:
+                            file_count += 1
+                            total_size += analysis['size']
+                            
+                            # Count file types
+                            file_type = analysis['file_type']
+                            file_types[file_type] = file_types.get(file_type, 0) + 1
+                            
+                            # Categorize files
+                            if analysis['is_executable']:
+                                categories['executables'].append(file_path)
+                            elif analysis['is_archive']:
+                                categories['archives'].append(file_path)
+                            elif analysis['is_document']:
+                                categories['documents'].append(file_path)
+                            elif analysis['is_image']:
+                                categories['images'].append(file_path)
+                            elif analysis['is_audio']:
+                                categories['audio'].append(file_path)
+                            elif analysis['is_video']:
+                                categories['video'].append(file_path)
+                            elif analysis['is_code']:
+                                categories['code'].append(file_path)
+                            else:
+                                categories['other'].append(file_path)
+                    except Exception as e:
+                        self.console.print(f"[red]Error analyzing {file_path}: {str(e)}[/red]")
+            
+            # Display summary
+            self.console.print("\n[bold blue]Directory Analysis Summary:[/bold blue]")
+            self.console.print(f"Total files found: {file_count}")
+            self.console.print(f"Total size: {total_size / 1024 / 1024:.2f} MB")
+            
+            # Display file type distribution
+            self.console.print("\n[bold]File Type Distribution:[/bold]")
+            for file_type, count in sorted(file_types.items(), key=lambda x: x[1], reverse=True):
+                self.console.print(f"{file_type}: {count} files")
+            
+            # Display category distribution
+            self.console.print("\n[bold]Category Distribution:[/bold]")
+            for category, files in categories.items():
+                if files:
+                    self.console.print(f"\n[bold]{category.title()}:[/bold] {len(files)} files")
+                    for file in files[:5]:  # Show first 5 files in each category
+                        self.console.print(f"  - {os.path.basename(file)}")
+                    if len(files) > 5:
+                        self.console.print(f"  ... and {len(files) - 5} more")
+            
+        except Exception as e:
+            self.console.print(f"[red]Error analyzing directory: {str(e)}[/red]")
+    
     def process_task(self, task: str) -> None:
         """Process the user's task and execute appropriate commands."""
         self.console.print(f"\n[bold blue]Operating System detected:[/bold blue] {self.os_type}")
         self.console.print(f"[bold blue]Processing task:[/bold blue] {task}")
         
+        # Check if the task is about analyzing all files
+        if any(phrase in task.lower() for phrase in ['analyze all', 'scan all', 'list all', 'show all']):
+            self.analyze_directory()
+            return
+            
         # Check if the task is about file analysis
         if any(word in task.lower() for word in ['analyze', 'show', 'display', 'info', 'information', 'details']):
             # Extract file path from task
